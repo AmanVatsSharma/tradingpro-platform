@@ -4,8 +4,8 @@
   "description": "trading app platform with nextjs, pothos, prisma, graphql, typescript, tailwindcss",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "npm run generate && next build",
+    "dev": "next dev --turbopack",
+    "build": "prisma generate && next build",
     "start": "next start",
     "lint": "next lint",
     "generate": "prisma generate",

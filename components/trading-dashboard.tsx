@@ -31,6 +31,7 @@ import { toast } from "@/hooks/use-toast"
 import { usePortfolio, useWatchlist, useOrders, usePositions, placeOrder, searchStocks } from "@/lib/hooks/use-trading-data"
 import { OrderManagement } from "@/components/order-management"
 import { PositionTracking } from "@/components/position-tracking"
+import { useSession } from "next-auth/react"
 
 interface WatchlistItem {
   id: string
@@ -66,6 +67,7 @@ const kiteBuyButton = "bg-blue-600 hover:bg-blue-700 text-white font-medium roun
 const kiteSellButton = "bg-red-600 hover:bg-red-700 text-white font-medium rounded-md transition-colors duration-200"
 
 export function TradingDashboard() {
+  const { data: session, status } = useSession();
   const [activeTab, setActiveTab] = useState("watchlist")
   const [orderDialogOpen, setOrderDialogOpen] = useState(false)
   const [stockSearchOpen, setStockSearchOpen] = useState(false)
@@ -77,7 +79,7 @@ export function TradingDashboard() {
   const [searchResults, setSearchResults] = useState<Stock[]>([])
   const [searchLoading, setSearchLoading] = useState(false)
 
-  const userId = "user_123" // In production, get from authentication context
+  const userId = session?.user?.id
 
   // Data hooks with error handling
   const {
@@ -198,11 +200,11 @@ export function TradingDashboard() {
       })
 
     } catch (error) {
-    toast({
-      title: "Order Failed",
-      description: error instanceof Error ? error.message : "Failed to place order",
-      variant: "destructive",
-    })
+      toast({
+        title: "Order Failed",
+        description: error instanceof Error ? error.message : "Failed to place order",
+        variant: "destructive",
+      })
     }
   }
 
@@ -825,6 +827,15 @@ export function TradingDashboard() {
 
       {!portfolioLoading && !portfolioError && portfolio && (
         <>
+          <Card className={kiteCard}>
+            <CardContent className="p-4">
+              {session?.user?.name && (
+                <p className="text-sm text-gray-600 mb-3">Hello, {session.user.name}!</p>
+              )}
+              {/* <h3 className="text-lg font-semibold text-gray-900">Account ID: {portfolio.account.accountId}</h3> */}
+              {/* <p className="text-sm text-gray-500 mt-1">Broker: {portfolio.account}</p> */}
+            </CardContent>
+          </Card>
           <Card className={kiteCard}>
             <CardContent className="p-4">
               <div className="flex items-center justify-between">

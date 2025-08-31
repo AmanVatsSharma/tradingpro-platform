@@ -237,7 +237,7 @@ const DELETE_ORDER = gql`
 
 // Stocks - for watchlist data
 const GET_STOCKS_FOR_WATCHLIST = gql`
-  query GetStocks($limit: Int = 20) {
+  query GetStocks($limit: Int = 200) {
     stockCollection(
       filter: { isActive: { eq: true } }
       orderBy: [{ changePercent: DescNullsLast }]

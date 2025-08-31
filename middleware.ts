@@ -8,10 +8,11 @@ import { NextResponse } from "next/server"
  * @type {string[]}
  */
 const publicRoutes = [
-  "/",
+  // "/",
   "/auth/error",
   "/api/graphql",
   "/api/kyc",
+  "/api/*"
 ];
 
 /**
@@ -21,6 +22,7 @@ const publicRoutes = [
  */
 const authRoutes = [
   "/auth/login",
+  "/auth/register"
   // Add other auth routes like /auth/register if you have them
 ];
 

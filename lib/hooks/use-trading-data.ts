@@ -867,20 +867,1049 @@
 // }
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// "use client"
+// import { useQuery } from "@apollo/client/react"
+// import { gql } from "@apollo/client/core"
+// import client from "@/lib/graphql/apollo-client"
+// import { ToEnum } from "zod/v4/core/util.cjs"
+// import { useEffect, useState, useMemo } from "react"
+// import { OrderSide, OrderType } from "@prisma/client"
+
+
+// // Poll intervals (ms)
+// const LTP_POLL_INTERVAL = 3000 // For fetching live prices
+// const ORDERS_POLL = 30000
+// const PORTFOLIO_POLL = 60000
+// const POSITIONS_POLL = 5000 // For fetching base position data
+
+// // -----------------------------
+// // GraphQL Documents (Fixed for Supabase Auto-gen)
+// // -----------------------------
+
+// // Users - using correct table name from schema
+// const GET_USER = gql`
+//   query GetUser($id: UUID!) {
+//     usersCollection(filter: { id: { eq: $id } }) {
+//       edges {
+//         node {
+//           id
+//           email
+//           name
+//           role
+//           isActive
+//           createdAt
+//         }
+//       }
+//     }
+//   }
+// `
+
+// const INSERT_USER = gql`
+//   mutation InsertUser($objects: [usersInsertInput!]!) {
+//     insertIntousersCollection(objects: $objects) {
+//       records {
+//         id
+//         email
+//         name
+//         role
+//       }
+//     }
+//   }
+// `
+
+// // Trading Account - using correct mapped table name
+// const GET_ACCOUNT_BY_USER = gql`
+//   query GetAccountByUser($userId: UUID!) {
+//     trading_accountsCollection(filter: { userId: { eq: $userId } }) {
+//       edges {
+//         node {
+//           id
+//           userId
+//           balance
+//           availableMargin
+//           usedMargin
+//           createdAt
+//           updatedAt
+//         }
+//       }
+//     }
+//   }
+// `
+
+// const INSERT_ACCOUNT = gql`
+//   mutation InsertAccount($objects: [trading_accountsInsertInput!]!) {
+//     insertIntotrading_accountsCollection(objects: $objects) {
+//       records {
+//         id
+//         userId
+//         balance
+//         availableMargin
+//         usedMargin
+//       }
+//     }
+//   }
+// `
+
+// // Positions - using correct mapped table name
+// const GET_POSITIONS = gql`
+//   query GetPositions($tradingAccountId: UUID!) {
+//     positionsCollection(
+//       filter: { tradingAccountId: { eq: $tradingAccountId } }
+//       orderBy: [{ createdAt: DescNullsLast }]
+//     ) {
+//       edges {
+//         node {
+//           id
+//           tradingAccountId
+//           symbol
+//           quantity
+//           averagePrice
+//           unrealizedPnL
+//           dayPnL
+//           stopLoss
+//           target
+//           createdAt
+//           stock {
+//             id
+//             ticker
+//             name
+//             ltp
+//             change
+//             changePercent
+//             instrumentId
+//           }
+//         }
+//       }
+//     }
+//   }
+// `
+
+// const UPDATE_POSITION = gql`
+//   mutation UpdatePosition($id: UUID!, $set: positionsUpdateInput!) {
+//     updatepositionsCollection(set: $set, filter: { id: { eq: $id } }) {
+//       affectedCount
+//       records {
+//         id
+//         stopLoss
+//         target
+//       }
+//     }
+//   }
+// `
+
+// const DELETE_POSITION = gql`
+//   mutation DeletePosition($id: UUID!) {
+//     deleteFrompositionsCollection(filter: { id: { eq: $id } }) {
+//       affectedCount
+//     }
+//   }
+// `
+
+// // Query to find an existing position for a given symbol and account
+// const GET_POSITION_BY_SYMBOL = gql`
+//   query GetPositionBySymbol($tradingAccountId: UUID!, $symbol: String!) {
+//     positionsCollection(
+//       filter: {
+//         tradingAccountId: { eq: $tradingAccountId }
+//         symbol: { eq: $symbol }
+//       }
+//     ) {
+//       edges {
+//         node {
+//           id
+//           quantity
+//           averagePrice
+//         }
+//       }
+//     }
+//   }
+// `
+
+// // Mutation to insert a new position
+// const INSERT_POSITION = gql`
+//   mutation InsertPosition($objects: [positionsInsertInput!]!) {
+//     insertIntopositionsCollection(objects: $objects) {
+//       records {
+//         id
+//         symbol
+//         quantity
+//       }
+//     }
+//   }
+// `
+
+// // Orders - using correct mapped table name
+// const GET_ORDERS = gql`
+//   query GetOrders($tradingAccountId: UUID!) {
+//     ordersCollection(
+//       filter: { tradingAccountId: { eq: $tradingAccountId } }
+//       orderBy: [{ createdAt: DescNullsLast }]
+//     ) {
+//       edges {
+//         node {
+//           id
+//           tradingAccountId
+//           symbol
+//           quantity
+//           orderType
+//           orderSide
+//           price
+//           filledQuantity
+//           averagePrice
+//           productType
+//           status
+//           createdAt
+//           executedAt
+//           stock {
+//             id
+//             ticker
+//             name
+//             ltp
+//           }
+//         }
+//       }
+//     }
+//   }
+// `
+
+// const INSERT_ORDER = gql`
+//   mutation InsertOrder($objects: [ordersInsertInput!]!) {
+//     insertIntoordersCollection(objects: $objects) {
+//       records {
+//         id
+//         symbol
+//         quantity
+//         orderType
+//         orderSide
+//         status
+//       }
+//     }
+//   }
+// `
+
+// const UPDATE_ORDER = gql`
+//   mutation UpdateOrder($id: UUID!, $set: ordersUpdateInput!) {
+//     updateordersCollection(set: $set, filter: { id: { eq: $id } }) {
+//       affectedCount
+//       records {
+//         id
+//         status
+//       }
+//     }
+//   }
+// `
+
+// const DELETE_ORDER = gql`
+//   mutation DeleteOrder($id: UUID!) {
+//     deleteFromordersCollection(filter: { id: { eq: $id } }) {
+//       affectedCount
+//     }
+//   }
+// `
+
+// // Stocks - for watchlist data
+// const GET_STOCKS_FOR_WATCHLIST = gql`
+//   query GetStocks($limit: Int = 10) {
+//     stockCollection(
+//       filter: { isActive: { eq: true } }
+//       orderBy: [{ changePercent: DescNullsLast }]
+//       first: $limit
+//     ) {
+//       edges {
+//         node {
+//           id
+//           instrumentId
+//           exchange
+//           ticker
+//           name
+//           ltp
+//           open
+//           high
+//           low
+//           close
+//           volume
+//           change
+//           changePercent
+//           sector
+//           isActive
+//           updatedAt
+//         }
+//       }
+//     }
+//   }
+// `
+
+// // Search stocks
+// const SEARCH_STOCKS = gql`
+//   query SearchStocks($query: String!) {
+//     stocksCollection(
+//       filter: {
+//         and: [
+//           { isActive: { eq: true } }
+//           {
+//             or: [
+//               { name: { ilike: $query } }
+//               { ticker: { ilike: $query } }
+//             ]
+//           }
+//         ]
+//       }
+//       first: 10
+//     ) {
+//       edges {
+//         node {
+//           id
+//           ticker
+//           name
+//           ltp
+//           change
+//           changePercent
+//           sector
+//           exchange
+//         }
+//       }
+//     }
+//   }
+// `
+
+// // -----------------------------
+// // Helper functions
+// // -----------------------------
+
+// const toNumber = (v: any): number => {
+//   if (v == null) return 0
+//   if (typeof v === "number") return v
+//   if (typeof v === "string") {
+//     const parsed = parseFloat(v)
+//     return isNaN(parsed) ? 0 : parsed
+//   }
+//   return 0
+// }
+
+// const generateUUID = () => {
+//   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+//     const r = Math.random() * 16 | 0
+//     const v = c == 'x' ? r : (r & 0x3 | 0x8)
+//     return v.toString(16)
+//   })
+// }
+
+// async function ensureUserAndAccount(
+//   apolloClient: any,
+//   userId: string,
+//   defaultFunding = 250000,
+// ): Promise<{ tradingAccountId: string }> {
+//   try {
+//     const userRes = await apolloClient.query({
+//       query: GET_USER,
+//       variables: { id: userId },
+//       fetchPolicy: "network-only",
+//       errorPolicy: "all"
+//     })
+
+//     const userExists = (userRes.data?.usersCollection?.edges?.length ?? 0) > 0
+
+//     if (!userExists) {
+//       try {
+//         await apolloClient.mutate({
+//           mutation: INSERT_USER,
+//           variables: {
+//             objects: [{
+//               id: userId,
+//               isActive: true,
+//               role: "USER",
+//               createdAt: new Date().toISOString(),
+//               updatedAt: new Date().toISOString()
+//             }],
+//           },
+//         })
+//       } catch (insertError) {
+//         console.error("Error inserting user:", insertError)
+//       }
+//     }
+
+//     const acctRes = await apolloClient.query({
+//       query: GET_ACCOUNT_BY_USER,
+//       variables: { userId },
+//       fetchPolicy: "network-only",
+//       errorPolicy: "all"
+//     })
+
+//     const acctNode = acctRes.data?.trading_accountsCollection?.edges?.[0]?.node
+//     if (acctNode?.id) {
+//       return { tradingAccountId: acctNode.id }
+//     }
+
+//     const accountId = generateUUID()
+//     await apolloClient.mutate({
+//       mutation: INSERT_ACCOUNT,
+//       variables: {
+//         objects: [
+//           {
+//             id: accountId,
+//             userId,
+//             balance: defaultFunding,
+//             availableMargin: defaultFunding,
+//             usedMargin: 0,
+//             createdAt: new Date().toISOString(),
+//             updatedAt: new Date().toISOString()
+//           },
+//         ],
+//       },
+//     })
+
+//     return { tradingAccountId: accountId }
+//   } catch (error) {
+//     console.error("Error in ensureUserAndAccount:", error)
+//     throw new Error("Failed to initialize user account")
+//   }
+// }
+
+// // -----------------------------
+// // Hooks
+// // -----------------------------
+
+// export function usePortfolio(userId?: string) {
+//   const {
+//     data: acctData,
+//     refetch: refetchAcct,
+//     loading: loadingAcct,
+//     error: errorAcct
+//   } = useQuery(GET_ACCOUNT_BY_USER, {
+//     variables: { userId: userId ?? "" },
+//     pollInterval: PORTFOLIO_POLL,
+//     skip: !userId,
+//     errorPolicy: "all",
+//     notifyOnNetworkStatusChange: true
+//   })
+
+//   async function ensure() {
+//     if (!userId) return null
+//     try {
+//       const acctNode = acctData?.trading_accountsCollection?.edges?.[0]?.node
+//       if (acctNode?.id) return acctNode
+
+//       await ensureUserAndAccount(client, userId)
+//       await refetchAcct()
+//       return null
+//     } catch (error) {
+//       console.error("Error ensuring user account:", error)
+//       return null
+//     }
+//   }
+
+//   const account = acctData?.trading_accountsCollection?.edges?.[0]?.node
+//   const balance = toNumber(account?.balance)
+//   const usedMargin = toNumber(account?.usedMargin)
+//   const availableMargin = toNumber(account?.availableMargin)
+//   const totalValue = balance || (availableMargin + usedMargin)
+
+//   return {
+//     portfolio: account ? {
+//       account: {
+//         totalValue,
+//         totalPnL: 0, 
+//         availableMargin,
+//         usedMargin,
+//         balance
+//       },
+//     } : null,
+//     isLoading: loadingAcct,
+//     isError: !!errorAcct,
+//     error: errorAcct,
+//     mutate: async () => {
+//       await refetchAcct()
+//     },
+//     ensure,
+//   }
+// }
+
+// export function useWatchlist() {
+//     const { data, loading, error, refetch } = useQuery(GET_STOCKS_FOR_WATCHLIST, {
+//       errorPolicy: "all",
+//       notifyOnNetworkStatusChange: true,
+//     });
+  
+//     const [liveWatchlist, setLiveWatchlist] = useState<any[]>([]);
+  
+//     const initialWatchlist = useMemo(() => {
+//       return (
+//         data?.stockCollection?.edges?.map((e: any) => ({
+//           id: e.node.id,
+//           instrumentId: e.node.instrumentId,
+//           symbol: e.node.ticker,
+//           name: e.node.name,
+//           ltp: toNumber(e.node.ltp),
+//           change: toNumber(e.node.change),
+//           changePercent: toNumber(e.node.changePercent),
+//           high: toNumber(e.node.high),
+//           low: toNumber(e.node.low),
+//           open: toNumber(e.node.open),
+//           close: toNumber(e.node.close),
+//           volume: toNumber(e.node.volume),
+//           sector: e.node.sector,
+//           exchange: e.node.exchange,
+//           lastUpdated: e.node.updatedAt,
+//         })) ?? []
+//       );
+//     }, [data]);
+  
+//     useEffect(() => {
+//       if (initialWatchlist.length > 0) {
+//         setLiveWatchlist(initialWatchlist);
+//       }
+//     }, [initialWatchlist]);
+  
+//     useEffect(() => {
+//       if (initialWatchlist.length === 0) return;
+  
+//       const instrumentIds = initialWatchlist.map((item) => item.instrumentId).filter(Boolean);
+//       if (instrumentIds.length === 0) return;
+  
+//       const fetchLTPs = async () => {
+//         try {
+//           const params = new URLSearchParams();
+//           instrumentIds.forEach((id) => params.append('q', id));
+//           const res = await fetch(`/api/quotes?${params.toString()}`);
+//           if (!res.ok) {
+//             console.error("Failed to fetch quotes, status:", res.status);
+//             return;
+//           }
+//           const quoteData = await res.json();
+  
+//           if (quoteData.status === 'success' && quoteData.data) {
+//             setLiveWatchlist((currentWatchlist) => {
+//               const baseWatchlist = currentWatchlist.length > 0 ? currentWatchlist : initialWatchlist;
+//               return baseWatchlist.map((item) => {
+//                 const liveData = quoteData.data[item.instrumentId];
+//                 if (liveData) {
+//                   const newLtp = liveData.last_trade_price;
+//                   const change = newLtp - item.close;
+//                   const changePercent = (change / item.close) * 100;
+//                   return {
+//                     ...item,
+//                     ltp: newLtp,
+//                     change: change,
+//                     changePercent: isFinite(changePercent) ? changePercent : 0,
+//                   };
+//                 }
+//                 return item;
+//               });
+//             });
+//           }
+//         } catch (err) {
+//           console.error("Failed to fetch live watchlist data:", err);
+//         }
+//       };
+  
+//       const interval = setInterval(fetchLTPs, LTP_POLL_INTERVAL);
+//       fetchLTPs(); 
+  
+//       return () => clearInterval(interval);
+//     }, [initialWatchlist]);
+  
+//     return {
+//       watchlist: liveWatchlist,
+//       isLoading: loading && liveWatchlist.length === 0,
+//       isError: !!error,
+//       error,
+//       mutate: refetch,
+//     };
+// }
+
+// function useAccountId(userId?: string) {
+//   const { data, error } = useQuery(GET_ACCOUNT_BY_USER, {
+//     variables: { userId: userId ?? "" },
+//     skip: !userId,
+//     pollInterval: PORTFOLIO_POLL,
+//     errorPolicy: "all"
+//   })
+
+//   if (error) {
+//     console.error("Error fetching account:", error)
+//   }
+
+//   const id = data?.trading_accountsCollection?.edges?.[0]?.node?.id
+//   return id as string | undefined
+// }
+
+// export function useOrders(userId?: string) {
+//   const tradingAccountId = useAccountId(userId)
+//   const { data, loading, error, refetch } = useQuery(GET_ORDERS, {
+//     variables: { tradingAccountId: tradingAccountId ?? "" },
+//     skip: !tradingAccountId,
+//     pollInterval: ORDERS_POLL,
+//     errorPolicy: "all",
+//     notifyOnNetworkStatusChange: true
+//   })
+
+//   const orders =
+//     data?.ordersCollection?.edges?.map((e: any) => ({
+//       ...e.node,
+//       price: e.node.price != null ? toNumber(e.node.price) : null,
+//       averagePrice: e.node.averagePrice != null ? toNumber(e.node.averagePrice) : null,
+//       stockName: e.node.Stock?.name || e.node.symbol,
+//       currentPrice: e.node.Stock ? toNumber(e.node.Stock.ltp) : null
+//     })) ?? []
+
+//   return {
+//     orders,
+//     isLoading: loading || !tradingAccountId,
+//     isError: !!error,
+//     error,
+//     mutate: refetch,
+//   }
+// }
+
+// export function usePositions(userId?: string) {
+//     const tradingAccountId = useAccountId(userId);
+//     const { data, loading, error, refetch } = useQuery(GET_POSITIONS, {
+//       variables: { tradingAccountId: tradingAccountId ?? "" },
+//       skip: !tradingAccountId,
+//       pollInterval: POSITIONS_POLL,
+//       errorPolicy: "all",
+//       notifyOnNetworkStatusChange: true,
+//     });
+  
+//     const [livePositions, setLivePositions] = useState<any[]>([]);
+  
+//     const initialPositions = useMemo(() => {
+//       return (
+//         data?.positionsCollection?.edges?.map((e: any) => ({
+//           ...e.node,
+//           averagePrice: toNumber(e.node.averagePrice),
+//           unrealizedPnL: toNumber(e.node.unrealizedPnL),
+//           dayPnL: toNumber(e.node.dayPnL),
+//           stopLoss: e.node.stopLoss != null ? toNumber(e.node.stopLoss) : undefined,
+//           target: e.node.target != null ? toNumber(e.node.target) : undefined,
+//           currentPrice: e.node.stock ? toNumber(e.node.stock.ltp) : toNumber(e.node.averagePrice),
+//           instrumentId: e.node.stock?.instrumentId,
+//           stockName: e.node.stock?.name || e.node.symbol,
+//           change: e.node.stock ? toNumber(e.node.stock.change) : 0,
+//           changePercent: e.node.stock ? toNumber(e.node.stock.changePercent) : 0,
+//         })) ?? []
+//       );
+//     }, [data]);
+  
+//     useEffect(() => {
+//       if (initialPositions.length > 0) {
+//         setLivePositions(initialPositions);
+//       } else {
+//         setLivePositions([]);
+//       }
+//     }, [initialPositions]);
+  
+//     useEffect(() => {
+//       if (initialPositions.length === 0) return;
+  
+//       const instrumentIds = initialPositions.map((p) => p.instrumentId).filter(Boolean);
+//       if (instrumentIds.length === 0) return;
+  
+//       const fetchLTPs = async () => {
+//         try {
+//           const params = new URLSearchParams();
+//           instrumentIds.forEach((id) => params.append('q', id));
+//           const res = await fetch(`/api/quotes?${params.toString()}`);
+//           if (!res.ok) return;
+//           const quoteData = await res.json();
+  
+//           if (quoteData.status === 'success' && quoteData.data) {
+//             setLivePositions((currentPositions) => {
+//               const basePositions = currentPositions.length > 0 ? currentPositions : initialPositions;
+//               return basePositions.map((pos) => {
+//                 const liveData = quoteData.data[pos.instrumentId];
+//                 if (liveData) {
+//                   const currentPrice = liveData.last_trade_price;
+//                   const unrealizedPnL = (currentPrice - pos.averagePrice) * pos.quantity;
+//                   return { ...pos, currentPrice, unrealizedPnL };
+//                 }
+//                 return pos;
+//               });
+//             });
+//           }
+//         } catch (err) {
+//           console.error("Failed to fetch live position data:", err);
+//         }
+//       };
+  
+//       const interval = setInterval(fetchLTPs, LTP_POLL_INTERVAL);
+//       fetchLTPs();
+  
+//       return () => clearInterval(interval);
+//     }, [initialPositions]);
+  
+//     return {
+//       positions: livePositions,
+//       isLoading: loading || !tradingAccountId,
+//       isError: !!error,
+//       error,
+//       mutate: refetch,
+//     };
+// }
+
+// export async function searchStocks(query: string) {
+//   try {
+//     const result = await client.query({
+//       query: SEARCH_STOCKS,
+//       variables: { query: `%${query}%` },
+//       fetchPolicy: "network-only"
+//     })
+
+//     return result.data?.stocksCollection?.edges?.map((e: any) => ({
+//       id: e.node.id,
+//       instrumentId: e.node.instrumentId,
+//       exchange: e.node.exchange,
+//       ticker: e.node.ticker,
+//       name: e.node.name,
+//       ltp: toNumber(e.node.ltp),
+//       change: toNumber(e.node.change),
+//       changePercent: toNumber(e.node.changePercent),
+//       sector: e.node.sector
+//     })) ?? []
+//   } catch (error) {
+//     console.error("Search error:", error)
+//     return []
+//   }
+// }
+
+// async function createOrUpdatePosition(
+//   apolloClient: any,
+//   executedOrder: {
+//     tradingAccountId: string
+//     symbol: string
+//     quantity: number
+//     orderSide: "BUY" | "SELL"
+//     price: string
+//     stockId?: string | null
+//   },
+// ) {
+//   const { data } = await apolloClient.query({
+//     query: GET_POSITION_BY_SYMBOL,
+//     variables: {
+//       tradingAccountId: executedOrder.tradingAccountId,
+//       symbol: executedOrder.symbol,
+//     },
+//     fetchPolicy: "network-only",
+//   })
+
+//   const existingPosition = data.positionsCollection?.edges?.[0]?.node
+
+//   if (existingPosition) {
+//     const currentQty = Number(existingPosition.quantity)
+//     const currentAvgPrice = toNumber(existingPosition.averagePrice)
+//     const orderQty = executedOrder.orderSide === "BUY" ? executedOrder.quantity : -executedOrder.quantity
+//     const orderPrice = executedOrder.price;
+
+//     const newQty = currentQty + orderQty
+
+//     if (newQty === 0) {
+//       await apolloClient.mutate({
+//         mutation: DELETE_POSITION,
+//         variables: { id: existingPosition.id },
+//       })
+//     } else {
+//       const newAvgPrice = ((currentAvgPrice * currentQty) + (parseInt(orderPrice) * orderQty)) / newQty
+
+//       await apolloClient.mutate({
+//         mutation: UPDATE_POSITION,
+//         variables: {
+//           id: existingPosition.id,
+//           set: {
+//             quantity: newQty,
+//             averagePrice: newAvgPrice.toFixed(2),
+//             updatedAt: new Date().toISOString(),
+//           },
+//         },
+//       })
+//     }
+//   } else {
+//     const positionId = generateUUID()
+//     const quantity = executedOrder.orderSide === "BUY" ? executedOrder.quantity : -executedOrder.quantity
+
+//     await apolloClient.mutate({
+//       mutation: INSERT_POSITION,
+//       variables: {
+//         objects: [{
+//           id: positionId,
+//           tradingAccountId: executedOrder.tradingAccountId,
+//           symbol: executedOrder.symbol,
+//           quantity: quantity,
+//           averagePrice: executedOrder.price.toFixed(2),
+//           stockId: executedOrder.stockId,
+//           createdAt: new Date().toISOString(),
+//         }],
+//       },
+//     })
+//   }
+// }
+
+// // -----------------------------
+// // Actions used by UI components
+// // -----------------------------
+
+// export async function placeOrder(orderData: {
+//   userId: string
+//   symbol: string
+//   stockId: string
+//   instrumentId: string
+//   quantity: number
+//   price?: string
+//   orderType: OrderType
+//   orderSide: OrderSide
+//   productType?: string
+// }) {
+//   try {
+//     const { tradingAccountId } = await ensureUserAndAccount(client, orderData.userId)
+//     const orderId = generateUUID()
+    
+//     let executionPrice = orderData.price ?? "0";
+
+//     // If it's a market order, fetch the latest price
+//     if (orderData.orderType === 'MARKET') {
+//         try {
+//             const res = await fetch(`/api/quotes?q=${orderData.instrumentId}&mode=ltp`);
+//             const quoteData = await res.json();
+//             if (quoteData.status === 'success' && quoteData.data[orderData.instrumentId]) {
+//                 executionPrice = quoteData.data[orderData.instrumentId].last_trade_price;
+//             } else {
+//                 throw new Error('Could not fetch LTP for market order');
+//             }
+//         } catch (e) {
+//             console.error(e);
+//             throw new Error('Failed to fetch price for market order.');
+//         }
+//     }
+
+
+//     const orderObject =  {
+//         id: orderId,
+//         tradingAccountId,
+//         symbol: orderData.symbol,
+//         stockId: orderData.stockId,
+//         quantity: orderData.quantity,
+//         price: executionPrice,
+//         orderType: orderData.orderType.toUpperCase(),
+//         orderSide: orderData.orderSide.toUpperCase(),
+//         productType: (orderData.productType ?? "MIS").toUpperCase(),
+//         status: "PENDING",
+//         filledQuantity: 0,
+//         createdAt: new Date().toISOString()
+//       }
+    
+//     await client.mutate({
+//       mutation: INSERT_ORDER,
+//       variables: { objects: orderObject },
+//     })
+
+//     setTimeout(async () => {
+//       try {
+//         await client.mutate({
+//           mutation: UPDATE_ORDER,
+//           variables: {
+//             id: orderId,
+//             set: {
+//               status: "EXECUTED",
+//               filledQuantity: orderData.quantity,
+//               averagePrice: executionPrice,
+//               executedAt: new Date().toISOString(),
+//             },
+//           },
+//         })
+//         await createOrUpdatePosition(client, {
+//           tradingAccountId,
+//           symbol: orderData.symbol,
+//           stockId: orderData.stockId,
+//           quantity: orderData.quantity,
+//           orderSide: orderData.orderSide,
+//           price: executionPrice,
+//         })
+//       } catch (executionError) {
+//         console.error("Error during simulated order execution:", executionError)
+//       }
+//     }, 1000) 
+
+
+//     return { success: true, orderId }
+//   } catch (error) {
+//     console.error("Error placing order:", error)
+//     console.error("GraphQL Error Details:", JSON.stringify(error, null, 2));
+//     throw new Error("Failed to place order. Please try again.")
+//   }
+// }
+
+// export async function cancelOrder(orderId: string) {
+//   try {
+//     await client.mutate({
+//       mutation: UPDATE_ORDER,
+//       variables: {
+//         id: orderId,
+//         set: {
+//           status: "CANCELLED",
+//         }
+//       },
+//     })
+//     return { success: true }
+//   } catch (error) {
+//     console.error("Error cancelling order:", error)
+//     throw new Error("Failed to cancel order. Please try again.")
+//   }
+// }
+
+// export async function modifyOrder(orderId: string, updates: { price?: number; quantity?: number }) {
+//   try {
+//     const set: Record<string, any> = {
+//       updatedAt: new Date().toISOString()
+//     }
+
+//     if (typeof updates.price === "number") set.price = updates.price
+//     if (typeof updates.quantity === "number") set.quantity = updates.quantity
+
+//     await client.mutate({
+//       mutation: UPDATE_ORDER,
+//       variables: { id: orderId, set },
+//     })
+//     return { success: true }
+//   } catch (error) {
+//     console.error("Error modifying order:", error)
+//     throw new Error("Failed to modify order. Please try again.")
+//   }
+// }
+
+// export async function deleteOrder(orderId: string) {
+//   try {
+//     await client.mutate({
+//       mutation: DELETE_ORDER,
+//       variables: { id: orderId },
+//     })
+//     return { success: true }
+//   } catch (error) {
+//     console.error("Error deleting order:", error)
+//     throw new Error("Failed to delete order. Please try again.")
+//   }
+// }
+
+// export async function closePosition(positionId: string) {
+//   try {
+//     await client.mutate({
+//       mutation: DELETE_POSITION,
+//       variables: { id: positionId },
+//     })
+//     return { success: true }
+//   } catch (error) {
+//     console.error("Error closing position:", error)
+//     throw new Error("Failed to close position. Please try again.")
+//   }
+// }
+
+// export async function updateStopLoss(positionId: string, stopLoss: number) {
+//   try {
+//     await client.mutate({
+//       mutation: UPDATE_POSITION,
+//       variables: {
+//         id: positionId,
+//         set: {
+//           stopLoss,
+//           updatedAt: new Date().toISOString()
+//         }
+//       },
+//     })
+//     return { success: true }
+//   } catch (error) {
+//     console.error("Error updating stop loss:", error)
+//     throw new Error("Failed to update stop loss. Please try again.")
+//   }
+// }
+
+// export async function updateTarget(positionId: string, target: number) {
+//   try {
+//     await client.mutate({
+//       mutation: UPDATE_POSITION,
+//       variables: {
+//         id: positionId,
+//         set: {
+//           target,
+//           updatedAt: new Date().toISOString()
+//         }
+//       },
+//     })
+//     return { success: true }
+//   } catch (error) {
+//     console.error("Error updating target:", error)
+//     throw new Error("Failed to update target. Please try again.")
+//   }
+// }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/**
+ * @file use-trading-data.ts
+ * @description Centralized hooks for fetching and managing trading data (portfolio, orders, positions) and handling actions.
+ * This file is updated to remove polling from individual hooks; live data updates are now handled by MarketDataProvider.
+ */
 "use client"
+
 import { useQuery } from "@apollo/client/react"
 import { gql } from "@apollo/client/core"
 import client from "@/lib/graphql/apollo-client"
-import { OrderSide, OrderType } from "@/prisma/generated/client"
-import { ToEnum } from "zod/v4/core/util.cjs"
-import { useEffect, useState, useMemo } from "react"
+import { useEffect, useMemo, useState } from "react"
+import { OrderSide, OrderType } from "@prisma/client"
 
-
-// Poll intervals (ms)
-const LTP_POLL_INTERVAL = 3000 // For fetching live prices
-const ORDERS_POLL = 30000
-const PORTFOLIO_POLL = 60000
-const POSITIONS_POLL = 5000 // For fetching base position data
+// Poll intervals (ms) - Reduced for better responsiveness
+const ORDERS_POLL = 15000 // Poll orders every 15 seconds
+const PORTFOLIO_POLL = 30000 // Poll portfolio/account details every 30 seconds
+const POSITIONS_POLL = 10000 // Poll base position data every 10 seconds
 
 // -----------------------------
 // GraphQL Documents (Fixed for Supabase Auto-gen)
@@ -964,19 +1993,13 @@ const GET_POSITIONS = gql`
           symbol
           quantity
           averagePrice
-          unrealizedPnL
-          dayPnL
           stopLoss
           target
           createdAt
           stock {
             id
-            ticker
-            name
-            ltp
-            change
-            changePercent
             instrumentId
+            name
           }
         }
       }
@@ -1060,12 +2083,6 @@ const GET_ORDERS = gql`
           status
           createdAt
           executedAt
-          stock {
-            id
-            ticker
-            name
-            ltp
-          }
         }
       }
     }
@@ -1123,15 +2140,8 @@ const GET_STOCKS_FOR_WATCHLIST = gql`
           ticker
           name
           ltp
-          open
-          high
-          low
           close
-          volume
-          change
-          changePercent
           sector
-          isActive
           updatedAt
         }
       }
@@ -1159,6 +2169,7 @@ const SEARCH_STOCKS = gql`
       edges {
         node {
           id
+          instrumentId
           ticker
           name
           ltp
@@ -1178,18 +2189,14 @@ const SEARCH_STOCKS = gql`
 
 const toNumber = (v: any): number => {
   if (v == null) return 0
-  if (typeof v === "number") return v
-  if (typeof v === "string") {
-    const parsed = parseFloat(v)
-    return isNaN(parsed) ? 0 : parsed
-  }
-  return 0
+  const parsed = parseFloat(v)
+  return isNaN(parsed) ? 0 : parsed
 }
 
 const generateUUID = () => {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-    const r = Math.random() * 16 | 0
-    const v = c == 'x' ? r : (r & 0x3 | 0x8)
+    const r = (Math.random() * 16) | 0
+    const v = c === 'x' ? r : (r & 0x3) | 0x8
     return v.toString(16)
   })
 }
@@ -1197,45 +2204,41 @@ const generateUUID = () => {
 async function ensureUserAndAccount(
   apolloClient: any,
   userId: string,
-  defaultFunding = 250000,
+  userName?: string | null,
+  userEmail?: string | null,
+  defaultFunding = 250000
 ): Promise<{ tradingAccountId: string }> {
   try {
-    const userRes = await apolloClient.query({
+    const { data: userRes } = await apolloClient.query({
       query: GET_USER,
       variables: { id: userId },
       fetchPolicy: "network-only",
-      errorPolicy: "all"
     })
 
-    const userExists = (userRes.data?.usersCollection?.edges?.length ?? 0) > 0
-
-    if (!userExists) {
-      try {
-        await apolloClient.mutate({
-          mutation: INSERT_USER,
-          variables: {
-            objects: [{
+    if ((userRes?.usersCollection?.edges?.length ?? 0) === 0) {
+      await apolloClient.mutate({
+        mutation: INSERT_USER,
+        variables: {
+          objects: [
+            {
               id: userId,
+              email: userEmail,
+              name: userName,
               isActive: true,
               role: "USER",
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString()
-            }],
-          },
-        })
-      } catch (insertError) {
-        console.error("Error inserting user:", insertError)
-      }
+            },
+          ],
+        },
+      })
     }
 
-    const acctRes = await apolloClient.query({
+    const { data: acctRes } = await apolloClient.query({
       query: GET_ACCOUNT_BY_USER,
       variables: { userId },
       fetchPolicy: "network-only",
-      errorPolicy: "all"
     })
 
-    const acctNode = acctRes.data?.trading_accountsCollection?.edges?.[0]?.node
+    const acctNode = acctRes?.trading_accountsCollection?.edges?.[0]?.node
     if (acctNode?.id) {
       return { tradingAccountId: acctNode.id }
     }
@@ -1251,8 +2254,6 @@ async function ensureUserAndAccount(
             balance: defaultFunding,
             availableMargin: defaultFunding,
             usedMargin: 0,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
           },
         ],
       },
@@ -1269,32 +2270,29 @@ async function ensureUserAndAccount(
 // Hooks
 // -----------------------------
 
-export function usePortfolio(userId?: string) {
+export function usePortfolio(userId?: string, userName?: string | null, userEmail?: string | null) {
   const {
     data: acctData,
     refetch: refetchAcct,
     loading: loadingAcct,
-    error: errorAcct
+    error: errorAcct,
   } = useQuery(GET_ACCOUNT_BY_USER, {
     variables: { userId: userId ?? "" },
     pollInterval: PORTFOLIO_POLL,
     skip: !userId,
     errorPolicy: "all",
-    notifyOnNetworkStatusChange: true
+    notifyOnNetworkStatusChange: true,
   })
 
   async function ensure() {
-    if (!userId) return null
+    if (!userId) return
     try {
-      const acctNode = acctData?.trading_accountsCollection?.edges?.[0]?.node
-      if (acctNode?.id) return acctNode
-
-      await ensureUserAndAccount(client, userId)
-      await refetchAcct()
-      return null
+      if (!acctData?.trading_accountsCollection?.edges?.[0]?.node) {
+         await ensureUserAndAccount(client, userId, userName, userEmail)
+         await refetchAcct()
+      }
     } catch (error) {
       console.error("Error ensuring user account:", error)
-      return null
     }
   }
 
@@ -1302,135 +2300,64 @@ export function usePortfolio(userId?: string) {
   const balance = toNumber(account?.balance)
   const usedMargin = toNumber(account?.usedMargin)
   const availableMargin = toNumber(account?.availableMargin)
-  const totalValue = balance || (availableMargin + usedMargin)
+  const totalValue = balance || availableMargin + usedMargin
 
   return {
-    portfolio: account ? {
-      account: {
-        totalValue,
-        totalPnL: 0, 
-        availableMargin,
-        usedMargin,
-        balance
-      },
-    } : null,
+    portfolio: account
+      ? {
+          account: {
+            id: account.id,
+            totalValue,
+            availableMargin,
+            usedMargin,
+            balance,
+          },
+        }
+      : null,
     isLoading: loadingAcct,
     isError: !!errorAcct,
     error: errorAcct,
-    mutate: async () => {
-      await refetchAcct()
-    },
+    mutate: refetchAcct,
     ensure,
   }
 }
 
 export function useWatchlist() {
-    const { data, loading, error, refetch } = useQuery(GET_STOCKS_FOR_WATCHLIST, {
-      errorPolicy: "all",
-      notifyOnNetworkStatusChange: true,
-    });
-  
-    const [liveWatchlist, setLiveWatchlist] = useState<any[]>([]);
-  
-    const initialWatchlist = useMemo(() => {
-      return (
-        data?.stockCollection?.edges?.map((e: any) => ({
-          id: e.node.id,
-          instrumentId: e.node.instrumentId,
-          symbol: e.node.ticker,
-          name: e.node.name,
-          ltp: toNumber(e.node.ltp),
-          change: toNumber(e.node.change),
-          changePercent: toNumber(e.node.changePercent),
-          high: toNumber(e.node.high),
-          low: toNumber(e.node.low),
-          open: toNumber(e.node.open),
-          close: toNumber(e.node.close),
-          volume: toNumber(e.node.volume),
-          sector: e.node.sector,
-          exchange: e.node.exchange,
-          lastUpdated: e.node.updatedAt,
-        })) ?? []
-      );
-    }, [data]);
-  
-    useEffect(() => {
-      if (initialWatchlist.length > 0) {
-        setLiveWatchlist(initialWatchlist);
-      }
-    }, [initialWatchlist]);
-  
-    useEffect(() => {
-      if (initialWatchlist.length === 0) return;
-  
-      const instrumentIds = initialWatchlist.map((item) => item.instrumentId).filter(Boolean);
-      if (instrumentIds.length === 0) return;
-  
-      const fetchLTPs = async () => {
-        try {
-          const params = new URLSearchParams();
-          instrumentIds.forEach((id) => params.append('q', id));
-          const res = await fetch(`/api/quotes?${params.toString()}`);
-          if (!res.ok) {
-            console.error("Failed to fetch quotes, status:", res.status);
-            return;
-          }
-          const quoteData = await res.json();
-  
-          if (quoteData.status === 'success' && quoteData.data) {
-            setLiveWatchlist((currentWatchlist) => {
-              const baseWatchlist = currentWatchlist.length > 0 ? currentWatchlist : initialWatchlist;
-              return baseWatchlist.map((item) => {
-                const liveData = quoteData.data[item.instrumentId];
-                if (liveData) {
-                  const newLtp = liveData.last_trade_price;
-                  const change = newLtp - item.close;
-                  const changePercent = (change / item.close) * 100;
-                  return {
-                    ...item,
-                    ltp: newLtp,
-                    change: change,
-                    changePercent: isFinite(changePercent) ? changePercent : 0,
-                  };
-                }
-                return item;
-              });
-            });
-          }
-        } catch (err) {
-          console.error("Failed to fetch live watchlist data:", err);
-        }
-      };
-  
-      const interval = setInterval(fetchLTPs, LTP_POLL_INTERVAL);
-      fetchLTPs(); 
-  
-      return () => clearInterval(interval);
-    }, [initialWatchlist]);
-  
-    return {
-      watchlist: liveWatchlist,
-      isLoading: loading && liveWatchlist.length === 0,
-      isError: !!error,
-      error,
-      mutate: refetch,
-    };
+  const { data, loading, error, refetch } = useQuery(GET_STOCKS_FOR_WATCHLIST, {
+    errorPolicy: "all",
+    notifyOnNetworkStatusChange: true,
+  })
+
+  const watchlist = useMemo(
+    () =>
+      data?.stockCollection?.edges?.map((e: any) => ({
+        id: e.node.id,
+        instrumentId: e.node.instrumentId,
+        symbol: e.node.ticker,
+        name: e.node.name,
+        ltp: toNumber(e.node.ltp),
+        close: toNumber(e.node.close),
+        exchange: e.node.exchange,
+      })) ?? [],
+    [data]
+  )
+
+  return {
+    watchlist,
+    isLoading: loading,
+    isError: !!error,
+    error,
+    mutate: refetch,
+  }
 }
 
 function useAccountId(userId?: string) {
-  const { data, error } = useQuery(GET_ACCOUNT_BY_USER, {
+  const { data } = useQuery(GET_ACCOUNT_BY_USER, {
     variables: { userId: userId ?? "" },
     skip: !userId,
-    pollInterval: PORTFOLIO_POLL,
-    errorPolicy: "all"
+    errorPolicy: "all",
   })
-
-  if (error) {
-    console.error("Error fetching account:", error)
-  }
-
-  const id = data?.trading_accountsCollection?.edges?.[0]?.node?.id
-  return id as string | undefined
+  return data?.trading_accountsCollection?.edges?.[0]?.node?.id as string | undefined
 }
 
 export function useOrders(userId?: string) {
@@ -1440,17 +2367,15 @@ export function useOrders(userId?: string) {
     skip: !tradingAccountId,
     pollInterval: ORDERS_POLL,
     errorPolicy: "all",
-    notifyOnNetworkStatusChange: true
+    notifyOnNetworkStatusChange: true,
   })
 
   const orders =
-    data?.ordersCollection?.edges?.map((e: any) => ({
+    useMemo(() => data?.ordersCollection?.edges?.map((e: any) => ({
       ...e.node,
       price: e.node.price != null ? toNumber(e.node.price) : null,
       averagePrice: e.node.averagePrice != null ? toNumber(e.node.averagePrice) : null,
-      stockName: e.node.Stock?.name || e.node.symbol,
-      currentPrice: e.node.Stock ? toNumber(e.node.Stock.ltp) : null
-    })) ?? []
+    })) ?? [], [data])
 
   return {
     orders,
@@ -1462,110 +2387,53 @@ export function useOrders(userId?: string) {
 }
 
 export function usePositions(userId?: string) {
-    const tradingAccountId = useAccountId(userId);
-    const { data, loading, error, refetch } = useQuery(GET_POSITIONS, {
-      variables: { tradingAccountId: tradingAccountId ?? "" },
-      skip: !tradingAccountId,
-      pollInterval: POSITIONS_POLL,
-      errorPolicy: "all",
-      notifyOnNetworkStatusChange: true,
-    });
-  
-    const [livePositions, setLivePositions] = useState<any[]>([]);
-  
-    const initialPositions = useMemo(() => {
-      return (
-        data?.positionsCollection?.edges?.map((e: any) => ({
-          ...e.node,
-          averagePrice: toNumber(e.node.averagePrice),
-          unrealizedPnL: toNumber(e.node.unrealizedPnL),
-          dayPnL: toNumber(e.node.dayPnL),
-          stopLoss: e.node.stopLoss != null ? toNumber(e.node.stopLoss) : undefined,
-          target: e.node.target != null ? toNumber(e.node.target) : undefined,
-          currentPrice: e.node.stock ? toNumber(e.node.stock.ltp) : toNumber(e.node.averagePrice),
-          instrumentId: e.node.stock?.instrumentId,
-          stockName: e.node.stock?.name || e.node.symbol,
-          change: e.node.stock ? toNumber(e.node.stock.change) : 0,
-          changePercent: e.node.stock ? toNumber(e.node.stock.changePercent) : 0,
-        })) ?? []
-      );
-    }, [data]);
-  
-    useEffect(() => {
-      if (initialPositions.length > 0) {
-        setLivePositions(initialPositions);
-      } else {
-        setLivePositions([]);
-      }
-    }, [initialPositions]);
-  
-    useEffect(() => {
-      if (initialPositions.length === 0) return;
-  
-      const instrumentIds = initialPositions.map((p) => p.instrumentId).filter(Boolean);
-      if (instrumentIds.length === 0) return;
-  
-      const fetchLTPs = async () => {
-        try {
-          const params = new URLSearchParams();
-          instrumentIds.forEach((id) => params.append('q', id));
-          const res = await fetch(`/api/quotes?${params.toString()}`);
-          if (!res.ok) return;
-          const quoteData = await res.json();
-  
-          if (quoteData.status === 'success' && quoteData.data) {
-            setLivePositions((currentPositions) => {
-              const basePositions = currentPositions.length > 0 ? currentPositions : initialPositions;
-              return basePositions.map((pos) => {
-                const liveData = quoteData.data[pos.instrumentId];
-                if (liveData) {
-                  const currentPrice = liveData.last_trade_price;
-                  const unrealizedPnL = (currentPrice - pos.averagePrice) * pos.quantity;
-                  return { ...pos, currentPrice, unrealizedPnL };
-                }
-                return pos;
-              });
-            });
-          }
-        } catch (err) {
-          console.error("Failed to fetch live position data:", err);
-        }
-      };
-  
-      const interval = setInterval(fetchLTPs, LTP_POLL_INTERVAL);
-      fetchLTPs();
-  
-      return () => clearInterval(interval);
-    }, [initialPositions]);
-  
-    return {
-      positions: livePositions,
-      isLoading: loading || !tradingAccountId,
-      isError: !!error,
-      error,
-      mutate: refetch,
-    };
+  const tradingAccountId = useAccountId(userId)
+  const { data, loading, error, refetch } = useQuery(GET_POSITIONS, {
+    variables: { tradingAccountId: tradingAccountId ?? "" },
+    skip: !tradingAccountId,
+    pollInterval: POSITIONS_POLL,
+    errorPolicy: "all",
+    notifyOnNetworkStatusChange: true,
+  })
+
+  const positions = useMemo(
+    () =>
+      data?.positionsCollection?.edges?.map((e: any) => ({
+        ...e.node,
+        averagePrice: toNumber(e.node.averagePrice),
+        stopLoss: e.node.stopLoss != null ? toNumber(e.node.stopLoss) : undefined,
+        target: e.node.target != null ? toNumber(e.node.target) : undefined,
+        instrumentId: e.node.stock?.instrumentId,
+      })) ?? [],
+    [data]
+  )
+
+  return {
+    positions,
+    isLoading: loading || !tradingAccountId,
+    isError: !!error,
+    error,
+    mutate: refetch,
+  }
 }
 
 export async function searchStocks(query: string) {
   try {
-    const result = await client.query({
+    const { data } = await client.query({
       query: SEARCH_STOCKS,
       variables: { query: `%${query}%` },
-      fetchPolicy: "network-only"
+      fetchPolicy: "network-only",
     })
 
-    return result.data?.stocksCollection?.edges?.map((e: any) => ({
-      id: e.node.id,
-      instrumentId: e.node.instrumentId,
-      exchange: e.node.exchange,
-      ticker: e.node.ticker,
-      name: e.node.name,
-      ltp: toNumber(e.node.ltp),
-      change: toNumber(e.node.change),
-      changePercent: toNumber(e.node.changePercent),
-      sector: e.node.sector
-    })) ?? []
+    return (
+      data?.stocksCollection?.edges?.map((e: any) => ({
+        id: e.node.id,
+        instrumentId: e.node.instrumentId,
+        ticker: e.node.ticker,
+        name: e.node.name,
+        ltp: toNumber(e.node.ltp),
+      })) ?? []
+    )
   } catch (error) {
     console.error("Search error:", error)
     return []
@@ -1581,7 +2449,7 @@ async function createOrUpdatePosition(
     orderSide: "BUY" | "SELL"
     price: number
     stockId?: string | null
-  },
+  }
 ) {
   const { data } = await apolloClient.query({
     query: GET_POSITION_BY_SYMBOL,
@@ -1593,22 +2461,25 @@ async function createOrUpdatePosition(
   })
 
   const existingPosition = data.positionsCollection?.edges?.[0]?.node
+  const orderPrice = executedOrder.price
 
   if (existingPosition) {
     const currentQty = Number(existingPosition.quantity)
     const currentAvgPrice = toNumber(existingPosition.averagePrice)
     const orderQty = executedOrder.orderSide === "BUY" ? executedOrder.quantity : -executedOrder.quantity
-    const orderPrice = executedOrder.price;
 
     const newQty = currentQty + orderQty
 
     if (newQty === 0) {
+      // Position is closed
       await apolloClient.mutate({
         mutation: DELETE_POSITION,
         variables: { id: existingPosition.id },
       })
     } else {
-      const newAvgPrice = ((currentAvgPrice * currentQty) + (orderPrice * orderQty)) / newQty
+      // Averaging logic for existing position
+      const newAvgPrice =
+        (currentAvgPrice * currentQty + orderPrice * orderQty) / newQty
 
       await apolloClient.mutate({
         mutation: UPDATE_POSITION,
@@ -1617,27 +2488,27 @@ async function createOrUpdatePosition(
           set: {
             quantity: newQty,
             averagePrice: newAvgPrice.toFixed(2),
-            updatedAt: new Date().toISOString(),
           },
         },
       })
     }
   } else {
-    const positionId = generateUUID()
+    // Creating a new position
     const quantity = executedOrder.orderSide === "BUY" ? executedOrder.quantity : -executedOrder.quantity
 
     await apolloClient.mutate({
       mutation: INSERT_POSITION,
       variables: {
-        objects: [{
-          id: positionId,
-          tradingAccountId: executedOrder.tradingAccountId,
-          symbol: executedOrder.symbol,
-          quantity: quantity,
-          averagePrice: executedOrder.price.toFixed(2),
-          stockId: executedOrder.stockId,
-          createdAt: new Date().toISOString(),
-        }],
+        objects: [
+          {
+            id: generateUUID(),
+            tradingAccountId: executedOrder.tradingAccountId,
+            symbol: executedOrder.symbol,
+            quantity: quantity,
+            averagePrice: orderPrice.toFixed(2),
+            stockId: executedOrder.stockId,
+          },
+        ],
       },
     })
   }
@@ -1649,58 +2520,58 @@ async function createOrUpdatePosition(
 
 export async function placeOrder(orderData: {
   userId: string
+  userName?: string | null
+  userEmail?: string | null
   symbol: string
   stockId: string
   instrumentId: string
   quantity: number
-  price?: string
+  price: number
   orderType: OrderType
   orderSide: OrderSide
   productType?: string
 }) {
   try {
-    const { tradingAccountId } = await ensureUserAndAccount(client, orderData.userId)
+    const { tradingAccountId } = await ensureUserAndAccount(client, orderData.userId, orderData.userName, orderData.userEmail)
     const orderId = generateUUID()
-    
-    let executionPrice = orderData.price ?? "0";
 
-    // If it's a market order, fetch the latest price
-    if (orderData.orderType === 'MARKET') {
-        try {
-            const res = await fetch(`/api/quotes?q=${orderData.instrumentId}&mode=ltp`);
-            const quoteData = await res.json();
-            if (quoteData.status === 'success' && quoteData.data[orderData.instrumentId]) {
-                executionPrice = quoteData.data[orderData.instrumentId].last_trade_price;
-            } else {
-                throw new Error('Could not fetch LTP for market order');
-            }
-        } catch (e) {
-            console.error(e);
-            throw new Error('Failed to fetch price for market order.');
+    let executionPrice = orderData.price
+
+    // For market orders, fetch the latest price to simulate execution
+    if (orderData.orderType === "MARKET") {
+      try {
+        const res = await fetch(`/api/quotes?q=${orderData.instrumentId}&mode=ltp`)
+        const quoteData = await res.json()
+        if (quoteData.status === "success" && quoteData.data[orderData.instrumentId]) {
+          executionPrice = toNumber(quoteData.data[orderData.instrumentId].last_trade_price)
+        } else {
+          throw new Error("Could not fetch LTP for market order execution.")
         }
+      } catch (e) {
+        console.error(e)
+        throw new Error("Failed to fetch price for market order.")
+      }
     }
 
-
-    const orderObject =  {
-        id: orderId,
-        tradingAccountId,
-        symbol: orderData.symbol,
-        stockId: orderData.stockId,
-        quantity: orderData.quantity,
-        price: executionPrice,
-        orderType: orderData.orderType.toUpperCase(),
-        orderSide: orderData.orderSide.toUpperCase(),
-        productType: (orderData.productType ?? "MIS").toUpperCase(),
-        status: "PENDING",
-        filledQuantity: 0,
-        createdAt: new Date().toISOString()
-      }
-    
     await client.mutate({
       mutation: INSERT_ORDER,
-      variables: { objects: orderObject },
+      variables: {
+        objects: {
+          id: orderId,
+          tradingAccountId,
+          symbol: orderData.symbol,
+          stockId: orderData.stockId,
+          quantity: orderData.quantity,
+          price: orderData.orderType === 'LIMIT' ? executionPrice : null,
+          orderType: orderData.orderType,
+          orderSide: orderData.orderSide,
+          productType: orderData.productType ?? "MIS",
+          status: "PENDING",
+        },
+      },
     })
 
+    // Simulate order execution after a short delay
     setTimeout(async () => {
       try {
         await client.mutate({
@@ -1710,7 +2581,7 @@ export async function placeOrder(orderData: {
             set: {
               status: "EXECUTED",
               filledQuantity: orderData.quantity,
-              averagePrice: executionPrice.toFixed(2),
+              averagePrice: executionPrice,
               executedAt: new Date().toISOString(),
             },
           },
@@ -1726,14 +2597,12 @@ export async function placeOrder(orderData: {
       } catch (executionError) {
         console.error("Error during simulated order execution:", executionError)
       }
-    }, 1000) 
-
+    }, 1200)
 
     return { success: true, orderId }
-  } catch (error) {
-    console.error("Error placing order:", error)
-    console.error("GraphQL Error Details:", JSON.stringify(error, null, 2));
-    throw new Error("Failed to place order. Please try again.")
+  } catch (error: any) {
+    console.error("Error placing order:", JSON.stringify(error, null, 2))
+    throw new Error(error.message || "Failed to place order.")
   }
 }
 
@@ -1743,35 +2612,26 @@ export async function cancelOrder(orderId: string) {
       mutation: UPDATE_ORDER,
       variables: {
         id: orderId,
-        set: {
-          status: "CANCELLED",
-        }
+        set: { status: "CANCELLED" },
       },
     })
     return { success: true }
   } catch (error) {
     console.error("Error cancelling order:", error)
-    throw new Error("Failed to cancel order. Please try again.")
+    throw new Error("Failed to cancel order.")
   }
 }
 
 export async function modifyOrder(orderId: string, updates: { price?: number; quantity?: number }) {
   try {
-    const set: Record<string, any> = {
-      updatedAt: new Date().toISOString()
-    }
-
-    if (typeof updates.price === "number") set.price = updates.price
-    if (typeof updates.quantity === "number") set.quantity = updates.quantity
-
     await client.mutate({
       mutation: UPDATE_ORDER,
-      variables: { id: orderId, set },
+      variables: { id: orderId, set: updates },
     })
     return { success: true }
   } catch (error) {
     console.error("Error modifying order:", error)
-    throw new Error("Failed to modify order. Please try again.")
+    throw new Error("Failed to modify order.")
   }
 }
 
@@ -1784,12 +2644,14 @@ export async function deleteOrder(orderId: string) {
     return { success: true }
   } catch (error) {
     console.error("Error deleting order:", error)
-    throw new Error("Failed to delete order. Please try again.")
+    throw new Error("Failed to delete order.")
   }
 }
 
 export async function closePosition(positionId: string) {
   try {
+    // This should ideally create a market order to square off the position.
+    // For simplicity here, we are directly deleting the position.
     await client.mutate({
       mutation: DELETE_POSITION,
       variables: { id: positionId },
@@ -1797,7 +2659,7 @@ export async function closePosition(positionId: string) {
     return { success: true }
   } catch (error) {
     console.error("Error closing position:", error)
-    throw new Error("Failed to close position. Please try again.")
+    throw new Error("Failed to close position.")
   }
 }
 
@@ -1807,16 +2669,13 @@ export async function updateStopLoss(positionId: string, stopLoss: number) {
       mutation: UPDATE_POSITION,
       variables: {
         id: positionId,
-        set: {
-          stopLoss,
-          updatedAt: new Date().toISOString()
-        }
+        set: { stopLoss },
       },
     })
     return { success: true }
   } catch (error) {
     console.error("Error updating stop loss:", error)
-    throw new Error("Failed to update stop loss. Please try again.")
+    throw new Error("Failed to update stop loss.")
   }
 }
 
@@ -1826,15 +2685,12 @@ export async function updateTarget(positionId: string, target: number) {
       mutation: UPDATE_POSITION,
       variables: {
         id: positionId,
-        set: {
-          target,
-          updatedAt: new Date().toISOString()
-        }
+        set: { target },
       },
     })
     return { success: true }
   } catch (error) {
     console.error("Error updating target:", error)
-    throw new Error("Failed to update target. Please try again.")
+    throw new Error("Failed to update target.")
   }
 }

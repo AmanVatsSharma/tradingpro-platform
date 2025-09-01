@@ -110,7 +110,7 @@ export function TradingDashboard() {
       try {
         setIndicesLoading(true);
         // Using NIFTYBEES and SENSEXBEES as examples for indices
-        const res = await fetch('/api/quotes?q=NSE_EQ-26009&q=BSE_EQ-590116&mode=ltp');
+        const res = await fetch('/api/quotes?q=NSE_EQ-26000&q=NSE_EQ-26009&mode=ltp');
         const data = await res.json();
         if (data.status === 'success') {
           setMarketIndices(data.data);
@@ -392,8 +392,8 @@ export function TradingDashboard() {
             <div><h1 className="text-lg font-semibold text-gray-900">TradingPro</h1></div>
           </div>
           <div className="flex items-center gap-4">
-            {renderIndex('NSE_EQ-26009', 'NIFTY')}
-            {renderIndex('BSE_EQ-590116', 'SENSEX')}
+            {renderIndex('NSE_EQ-26000', 'NIFTY')}
+            {renderIndex('NSE_EQ-26009', 'BANKNIFTY')}
           </div>
         </div>
       </header>

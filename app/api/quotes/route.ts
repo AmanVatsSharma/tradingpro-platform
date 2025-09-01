@@ -1,16 +1,15 @@
-// app/api/nifty/route.ts
+// app/api/quotes/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import axios from "axios";
 
-export async function GET() {
+export async function GET(request: Request) {
   // 1. Read the API key from environment variables
   const apiKey = process.env.VORTEX_X_API_KEY;
 
   // 2. Add a guard clause to check if the key exists
   if (!apiKey) {
     console.error("VORTEX_X_API_KEY is not defined in environment variables.");
-    // Return a server error response, not a client error
     return NextResponse.json(
       { error: "Server configuration error." },
       { status: 500 }
@@ -26,9 +25,17 @@ export async function GET() {
       return NextResponse.json({ error: "No active session token found" }, { status: 401 });
     }
 
-    const url = "https://vortex-api.rupeezy.in/v2/data/quotes?q=NSE_EQ-22&q=NSE_EQ-26009&mode=ltp";
+    const { searchParams } = new URL(request.url);
+    const instruments = searchParams.getAll('q');
+    const mode = searchParams.get('mode') || 'ltp';
 
-    // Axios request syntax
+    if (instruments.length === 0) {
+        return NextResponse.json({ error: "Query parameter 'q' is required." }, { status: 400 });
+    }
+
+    const queryString = instruments.map(inst => `q=${encodeURIComponent(inst)}`).join('&');
+    const url = `https://vortex-api.rupeezy.in/v2/data/quotes?${queryString}&mode=${mode}`;
+
     const response = await axios.get(url, {
       headers: {
         'Authorization': `Bearer ${session.accessToken}`,
@@ -38,7 +45,6 @@ export async function GET() {
 
     return NextResponse.json(response.data);
   } catch (err: any) {
-    // Axios provides better details on request errors
     if (axios.isAxiosError(err)) {
       console.error("Axios error:", err.response?.data);
       return NextResponse.json(
@@ -46,6 +52,7 @@ export async function GET() {
         { status: err.response?.status || 500 }
       );
     }
+    console.error("Unexpected error:", err);
     return NextResponse.json({ error: "An unexpected error occurred." }, { status: 500 });
   }
 }

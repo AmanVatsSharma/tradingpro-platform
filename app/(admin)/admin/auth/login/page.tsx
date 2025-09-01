@@ -8,6 +8,7 @@ export default function LoginPage() {
 
   const handleLogin = () => {
     const appId = process.env.NEXT_PUBLIC_VORTEX_APPLICATION_ID;
+    // Redirects the user to Rupeezy to authorize your app
     window.location.href = `https://flow.rupeezy.in?applicationId=${appId}`;
   };
 

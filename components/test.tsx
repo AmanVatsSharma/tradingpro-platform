@@ -222,7 +222,7 @@ export function TradingDashboard() {
         }
     }, [selectedContract]);
 
-    const margin = 50000 * lots 
+    const margin = 15000 * lots 
     const availableBalance = portfolio?.account?.availableMargin || 0
 
     const handleSubmitOrder = async () => {

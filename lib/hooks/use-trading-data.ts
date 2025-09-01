@@ -709,7 +709,7 @@
 //         filledQuantity: 0,
 //         createdAt: new Date().toISOString()
 //       }
-    
+
 
 //     // 👇 DEBUGGING STEP: Log the object right before sending it
 //     console.log("Sending order object:", JSON.stringify(orderObject, null, 2));
@@ -1357,9 +1357,9 @@
 //       errorPolicy: "all",
 //       notifyOnNetworkStatusChange: true,
 //     });
-  
+
 //     const [liveWatchlist, setLiveWatchlist] = useState<any[]>([]);
-  
+
 //     const initialWatchlist = useMemo(() => {
 //       return (
 //         data?.stockCollection?.edges?.map((e: any) => ({
@@ -1381,19 +1381,19 @@
 //         })) ?? []
 //       );
 //     }, [data]);
-  
+
 //     useEffect(() => {
 //       if (initialWatchlist.length > 0) {
 //         setLiveWatchlist(initialWatchlist);
 //       }
 //     }, [initialWatchlist]);
-  
+
 //     useEffect(() => {
 //       if (initialWatchlist.length === 0) return;
-  
+
 //       const instrumentIds = initialWatchlist.map((item) => item.instrumentId).filter(Boolean);
 //       if (instrumentIds.length === 0) return;
-  
+
 //       const fetchLTPs = async () => {
 //         try {
 //           const params = new URLSearchParams();
@@ -1404,7 +1404,7 @@
 //             return;
 //           }
 //           const quoteData = await res.json();
-  
+
 //           if (quoteData.status === 'success' && quoteData.data) {
 //             setLiveWatchlist((currentWatchlist) => {
 //               const baseWatchlist = currentWatchlist.length > 0 ? currentWatchlist : initialWatchlist;
@@ -1429,13 +1429,13 @@
 //           console.error("Failed to fetch live watchlist data:", err);
 //         }
 //       };
-  
+
 //       const interval = setInterval(fetchLTPs, LTP_POLL_INTERVAL);
 //       fetchLTPs(); 
-  
+
 //       return () => clearInterval(interval);
 //     }, [initialWatchlist]);
-  
+
 //     return {
 //       watchlist: liveWatchlist,
 //       isLoading: loading && liveWatchlist.length === 0,
@@ -1498,9 +1498,9 @@
 //       errorPolicy: "all",
 //       notifyOnNetworkStatusChange: true,
 //     });
-  
+
 //     const [livePositions, setLivePositions] = useState<any[]>([]);
-  
+
 //     const initialPositions = useMemo(() => {
 //       return (
 //         data?.positionsCollection?.edges?.map((e: any) => ({
@@ -1518,7 +1518,7 @@
 //         })) ?? []
 //       );
 //     }, [data]);
-  
+
 //     useEffect(() => {
 //       if (initialPositions.length > 0) {
 //         setLivePositions(initialPositions);
@@ -1526,13 +1526,13 @@
 //         setLivePositions([]);
 //       }
 //     }, [initialPositions]);
-  
+
 //     useEffect(() => {
 //       if (initialPositions.length === 0) return;
-  
+
 //       const instrumentIds = initialPositions.map((p) => p.instrumentId).filter(Boolean);
 //       if (instrumentIds.length === 0) return;
-  
+
 //       const fetchLTPs = async () => {
 //         try {
 //           const params = new URLSearchParams();
@@ -1540,7 +1540,7 @@
 //           const res = await fetch(`/api/quotes?${params.toString()}`);
 //           if (!res.ok) return;
 //           const quoteData = await res.json();
-  
+
 //           if (quoteData.status === 'success' && quoteData.data) {
 //             setLivePositions((currentPositions) => {
 //               const basePositions = currentPositions.length > 0 ? currentPositions : initialPositions;
@@ -1559,13 +1559,13 @@
 //           console.error("Failed to fetch live position data:", err);
 //         }
 //       };
-  
+
 //       const interval = setInterval(fetchLTPs, LTP_POLL_INTERVAL);
 //       fetchLTPs();
-  
+
 //       return () => clearInterval(interval);
 //     }, [initialPositions]);
-  
+
 //     return {
 //       positions: livePositions,
 //       isLoading: loading || !tradingAccountId,
@@ -1689,7 +1689,7 @@
 //   try {
 //     const { tradingAccountId } = await ensureUserAndAccount(client, orderData.userId)
 //     const orderId = generateUUID()
-    
+
 //     let executionPrice = orderData.price ?? "0";
 
 //     // If it's a market order, fetch the latest price
@@ -1723,7 +1723,7 @@
 //         filledQuantity: 0,
 //         createdAt: new Date().toISOString()
 //       }
-    
+
 //     await client.mutate({
 //       mutation: INSERT_ORDER,
 //       variables: { objects: orderObject },
@@ -2288,8 +2288,8 @@ export function usePortfolio(userId?: string, userName?: string | null, userEmai
     if (!userId) return
     try {
       if (!acctData?.trading_accountsCollection?.edges?.[0]?.node) {
-         await ensureUserAndAccount(client, userId, userName, userEmail)
-         await refetchAcct()
+        await ensureUserAndAccount(client, userId, userName, userEmail)
+        await refetchAcct()
       }
     } catch (error) {
       console.error("Error ensuring user account:", error)
@@ -2305,14 +2305,14 @@ export function usePortfolio(userId?: string, userName?: string | null, userEmai
   return {
     portfolio: account
       ? {
-          account: {
-            id: account.id,
-            totalValue,
-            availableMargin,
-            usedMargin,
-            balance,
-          },
-        }
+        account: {
+          id: account.id,
+          totalValue,
+          availableMargin,
+          usedMargin,
+          balance,
+        },
+      }
       : null,
     isLoading: loadingAcct,
     isError: !!errorAcct,
@@ -2447,7 +2447,7 @@ async function createOrUpdatePosition(
     symbol: string
     quantity: number
     orderSide: "BUY" | "SELL"
-    price: number
+    price: string
     stockId?: string | null
   }
 ) {
@@ -2479,7 +2479,7 @@ async function createOrUpdatePosition(
     } else {
       // Averaging logic for existing position
       const newAvgPrice =
-        (currentAvgPrice * currentQty + orderPrice * orderQty) / newQty
+        (currentAvgPrice * currentQty + parseInt(orderPrice) * orderQty) / newQty
 
       await apolloClient.mutate({
         mutation: UPDATE_POSITION,
@@ -2487,7 +2487,8 @@ async function createOrUpdatePosition(
           id: existingPosition.id,
           set: {
             quantity: newQty,
-            averagePrice: newAvgPrice.toFixed(2),
+            // averagePrice: newAvgPrice.toFixed(2),
+            averagePrice: newAvgPrice,
           },
         },
       })
@@ -2505,7 +2506,8 @@ async function createOrUpdatePosition(
             tradingAccountId: executedOrder.tradingAccountId,
             symbol: executedOrder.symbol,
             quantity: quantity,
-            averagePrice: orderPrice.toFixed(2),
+            // averagePrice: orderPrice.toFixed(2),
+            averagePrice: orderPrice,
             stockId: executedOrder.stockId,
           },
         ],
@@ -2526,7 +2528,7 @@ export async function placeOrder(orderData: {
   stockId: string
   instrumentId: string
   quantity: number
-  price: number
+  price: string
   orderType: OrderType
   orderSide: OrderSide
   productType?: string
@@ -2543,7 +2545,8 @@ export async function placeOrder(orderData: {
         const res = await fetch(`/api/quotes?q=${orderData.instrumentId}&mode=ltp`)
         const quoteData = await res.json()
         if (quoteData.status === "success" && quoteData.data[orderData.instrumentId]) {
-          executionPrice = toNumber(quoteData.data[orderData.instrumentId].last_trade_price)
+          // executionPrice = toNumber(quoteData.data[orderData.instrumentId].last_trade_price)
+          executionPrice = quoteData.data[orderData.instrumentId].last_trade_price
         } else {
           throw new Error("Could not fetch LTP for market order execution.")
         }
@@ -2597,7 +2600,7 @@ export async function placeOrder(orderData: {
       } catch (executionError) {
         console.error("Error during simulated order execution:", executionError)
       }
-    }, 1200)
+    }, 3000)
 
     return { success: true, orderId }
   } catch (error: any) {

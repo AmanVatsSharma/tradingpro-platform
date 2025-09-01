@@ -5,7 +5,7 @@ import ValidationPlugin from '@pothos/plugin-validation';
 import ScopeAuthPlugin from '@pothos/plugin-scope-auth';
 // @ts-ignore
 import type PrismaTypes from '../generated/pothos-types';
-import { PrismaClient } from './prisma/generated/client';
+import { PrismaClient } from '@prisma/client';
 
 export interface Context {
   prisma: PrismaClient;

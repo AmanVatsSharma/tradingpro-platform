@@ -1,15 +1,14 @@
 import { createYoga } from 'graphql-yoga';
-import { PrismaClient } from '../../prisma/generated/client';
 // @ts-ignore - Generated files may have type issues
 import { generateAllCrud } from '../../generated/autocrud';
 import { builder } from '@/builder';
 import { getToken } from 'next-auth/jwt';
 import jwt from 'jsonwebtoken';
-
+import { prisma } from '@/lib/prisma';
 // Initialize Prisma client
-const prisma = new PrismaClient({
-  log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
-});
+// const prisma = new PrismaClient({
+//   log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+// });
 
 // Generate all CRUD operations before building schema
 try {

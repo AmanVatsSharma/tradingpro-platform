@@ -109,7 +109,7 @@ export function TradingDashboard() {
     const fetchIndices = async () => {
       try {
         setIndicesLoading(true);
-        // Using NIFTYBEES and SENSEXBEES as examples for indices
+        // Using NIFTYBEES and BANKNIFTY as examples for indices
         const res = await fetch('/api/quotes?q=NSE_EQ-26000&q=NSE_EQ-26009&mode=ltp');
         const data = await res.json();
         if (data.status === 'success') {

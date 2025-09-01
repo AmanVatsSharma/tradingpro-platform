@@ -1653,7 +1653,7 @@ export async function placeOrder(orderData: {
   stockId: string
   instrumentId: string
   quantity: number
-  price?: number | null
+  price?: string
   orderType: OrderType
   orderSide: OrderSide
   productType?: string
@@ -1662,7 +1662,7 @@ export async function placeOrder(orderData: {
     const { tradingAccountId } = await ensureUserAndAccount(client, orderData.userId)
     const orderId = generateUUID()
     
-    let executionPrice = orderData.price ?? 0;
+    let executionPrice = orderData.price ?? "0";
 
     // If it's a market order, fetch the latest price
     if (orderData.orderType === 'MARKET') {

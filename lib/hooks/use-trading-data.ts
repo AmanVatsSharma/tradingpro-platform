@@ -2537,7 +2537,7 @@ export async function placeOrder(orderData: {
     const { tradingAccountId } = await ensureUserAndAccount(client, orderData.userId, orderData.userName, orderData.userEmail)
     const orderId = generateUUID()
 
-    let executionPrice = orderData.price
+    let executionPrice = `${orderData.price}`
 
     // For market orders, fetch the latest price to simulate execution
     if (orderData.orderType === "MARKET") {
@@ -2565,7 +2565,8 @@ export async function placeOrder(orderData: {
           symbol: orderData.symbol,
           stockId: orderData.stockId,
           quantity: orderData.quantity,
-          price: orderData.orderType === 'LIMIT' ? executionPrice : null,
+          // price: orderData.orderType === 'LIMIT' ? executionPrice : null,
+          price: executionPrice,
           orderType: orderData.orderType,
           orderSide: orderData.orderSide,
           productType: orderData.productType ?? "MIS",
@@ -2584,7 +2585,7 @@ export async function placeOrder(orderData: {
             set: {
               status: "EXECUTED",
               filledQuantity: orderData.quantity,
-              averagePrice: executionPrice,
+              averagePrice: `${executionPrice}`,
               executedAt: new Date().toISOString(),
             },
           },
@@ -2595,7 +2596,7 @@ export async function placeOrder(orderData: {
           stockId: orderData.stockId,
           quantity: orderData.quantity,
           orderSide: orderData.orderSide,
-          price: executionPrice,
+          price: `${executionPrice}`,
         })
       } catch (executionError) {
         console.error("Error during simulated order execution:", executionError)

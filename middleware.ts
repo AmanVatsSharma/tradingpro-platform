@@ -12,6 +12,7 @@ const publicRoutes = [
   "/auth/error",
   "/api/graphql",
   "/api/kyc",
+  "api/quotes",
   "/api/*"
 ];
 

@@ -37,7 +37,7 @@ interface WatchlistItem {
   id: string
   symbol: string
   name: string
-  ltp: number
+  ltp: string
   change: number
   changePercent: number
   high: number
@@ -332,7 +332,7 @@ export function TradingDashboard() {
   const OrderDialog = () => {
     const [orderType, setOrderType] = useState<"BUY" | "SELL">("BUY")
     const [lots, setLots] = useState(1)
-    const [price, setPrice] = useState(selectedContract?.ltp || 0)
+    const [price, setPrice] = useState(selectedContract?.ltp || `0`)
     const [placing, setPlacing] = useState(false)
 
     const margin = 50000 * lots // Simplified margin calculation

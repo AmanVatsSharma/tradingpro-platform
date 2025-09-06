@@ -95,8 +95,14 @@ export const login = async (values: z.infer<typeof signInSchema>) => {
 }
 
 function generateClientId() {
-    // Example: AH + random 4 digits
-    return "AH" + Math.floor(1000 + Math.random() * 9000);
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    const randomLetters = Array.from({ length: 2 }, () =>
+        chars.charAt(Math.floor(Math.random() * chars.length))
+    ).join("");
+
+    const randomNumbers = Math.floor(1000 + Math.random() * 9000);
+
+    return randomLetters + randomNumbers;
 }
 
 export const register = async (values: z.infer<typeof signUpSchema>) => {
@@ -136,6 +142,7 @@ export const register = async (values: z.infer<typeof signUpSchema>) => {
                 balance: 0,
                 availableMargin: 0, // Demo margin for trading
                 usedMargin: 0,
+                clientId,
                 orders:{
                     create: {
                         orderSide: "BUY",

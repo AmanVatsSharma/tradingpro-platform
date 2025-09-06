@@ -427,7 +427,7 @@ function DashboardContent({ session, portfolio, watchlist, orders, positions }: 
             setOrderSide("BUY")
             setOrderProductType("LIMIT")
         }
-    }, [selectedStock, ltp])
+    }, [selectedStock])
 
     const handleSubmit = async () => {
       setIsPlacing(true)

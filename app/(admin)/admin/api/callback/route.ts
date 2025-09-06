@@ -7,6 +7,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     // 1. Get the temporary auth token from Rupeezy's redirect
     const authToken = searchParams.get("auth");
+    console.log('authTOken:', authToken)
 
     if (!authToken) {
         return NextResponse.json({ error: "Missing auth token" }, { status: 400 });
@@ -20,6 +21,7 @@ export async function GET(req: NextRequest) {
     const checksum = crypto.createHash("sha256").update(raw).digest("hex");
 
     // 3. Exchange the auth token for an access token
+    console.log('sending request to votex (exchange token) with', 'appId:', appId,)
     const res = await fetch("https://vortex-api.rupeezy.in/v2/user/session", {
         method: "POST",
         headers: {
@@ -34,7 +36,8 @@ export async function GET(req: NextRequest) {
     });
 
     const data = await res.json();
-
+    console.log('res data:', data)
+    
     // 4. If successful, save the access token to the database
     if (data.status === "success") {
         await prisma.vortexSession.create({

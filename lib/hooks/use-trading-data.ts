@@ -1006,7 +1006,7 @@ const GET_POSITIONS = gql`
       edges {
         node {
           id, symbol, quantity, averagePrice, stopLoss, target
-          Stock { instrumentId }
+          stock { instrumentId }
         }
       }
     }
@@ -1102,7 +1102,7 @@ const GET_USER_WATCHLIST = gql`
         node {
           id
           name
-          items {
+          watchlistItemCollection {
             edges {
               node {
                 id # This is the watchlistItemId
@@ -1120,7 +1120,7 @@ const GET_USER_WATCHLIST = gql`
 
 const CREATE_WATCHLIST = gql`
     mutation CreateWatchlist($userId: UUID!, $name: String!) {
-        insertIntowatchlistCollection(objects: [{ userId: $userId, name: $name }]) {
+        insertIntoWatchlistCollection(objects: [{ userId: $userId, name: $name }]) {
             records { id }
         }
     }
@@ -1128,7 +1128,7 @@ const CREATE_WATCHLIST = gql`
 
 const ADD_WATCHLIST_ITEM = gql`
   mutation AddWatchlistItem($watchlistId: UUID!, $stockId: UUID!) {
-    insertIntowatchlistItemCollection(objects: [{ watchlistId: $watchlistId, stockId: $stockId }]) {
+    insertIntoWatchlistItemCollection(objects: [{ watchlistId: $watchlistId, stockId: $stockId }]) {
       records { id }
     }
   }
@@ -1250,7 +1250,7 @@ export function useUserWatchlist(userId?: string) {
         const wlNode = data?.watchlistCollection?.edges?.[0]?.node;
         if (!wlNode) return { id: null, name: 'My Watchlist', items: [] };
 
-        const items = wlNode.items.edges.map((e: any) => ({
+        const items = wlNode.watchlistItemCollection.edges.map((e: any) => ({
             watchlistItemId: e.node.id,
             id: e.node.stock.id,
             instrumentId: e.node.stock.instrumentId,
